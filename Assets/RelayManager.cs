@@ -13,6 +13,8 @@ public class RelayManager : MonoBehaviour
     [SerializeField] private string joinCode;
     [SerializeField] private TMP_Text joinCodeText;
     [SerializeField] private TMP_InputField joinCodeInput;
+    [SerializeField] private GameObject StartUI;
+
     private UnityTransport unityTransport;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -20,6 +22,9 @@ public class RelayManager : MonoBehaviour
     {
         unityTransport = (UnityTransport)NetworkManager.Singleton.NetworkConfig.NetworkTransport;
         SignIn();
+
+        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        Debug.Log("OnClientConnected callback registered.");
     }
 
     // Update is called once per frame
@@ -60,7 +65,46 @@ public class RelayManager : MonoBehaviour
            joinAllocation.AllocationIdBytes, joinAllocation.Key, joinAllocation.ConnectionData, joinAllocation.HostConnectionData);
         // 3. StartClient()
         NetworkManager.Singleton.StartClient();
+
+        Debug.Log("Client started.");
+
+        await System.Threading.Tasks.Task.Delay(2000);
+
+        Debug.Log($"[JoinRelay] IsConnected: {NetworkManager.Singleton.IsConnectedClient}");
+
+        HideStartUIClientRpc();
     }
 
+    private void OnClientConnected(ulong clientId)
+    {
+        Debug.Log($"[OnClientConnected] Client {clientId} connected.");
+
+        if (NetworkManager.Singleton.IsHost)
+        {
+            if (NetworkManager.Singleton.ConnectedClientsList.Count == 2)
+            {
+                Debug.Log("Both players connected, hiding UI...");
+                StartUI.SetActive(false);
+                HideStartUIClientRpc();
+            }
+        }
+    }
+
+    // [ClientRpc]
+    private void HideStartUIClientRpc()
+    {
+        Debug.Log($"Executing HideStartUIClientRpc on client: {NetworkManager.Singleton.LocalClientId}");
+
+
+        if (StartUI != null)
+        {
+            Debug.Log("Start UI found, hiding now.");
+            StartUI.SetActive(false);
+        }
+        else
+        {
+            Debug.LogError("StartUI is null! Make sure it's assigned in the inspector.");
+        }
+    }
 
 }
